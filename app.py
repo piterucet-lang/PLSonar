@@ -1,4 +1,5 @@
 import os
+import json
 import base64
 from datetime import datetime
 import requests
@@ -11,18 +12,36 @@ load_dotenv()
 
 app = Flask(__name__)
 
+# Настройки
 CREDENTIALS_PATH = os.getenv('CREDENTIALS_PATH', 'credentials.json')
 SPREADSHEET_ID = os.getenv('SPREADSHEET_ID')
 IMGBB_API_KEY = os.getenv('IMGBB_API_KEY')
 
-if not IMGBB_API_KEY:
-    print("⚠️ IMGBB_API_KEY не задан в .env! Фото не будут сохраняться.")
+# Проверяем, существует ли файл, иначе пробуем альтернативные пути
+if not os.path.exists(CREDENTIALS_PATH):
+    # Попробуем в текущей директории
+    if os.path.exists('credentials.json'):
+        CREDENTIALS_PATH = 'credentials.json'
+    else:
+        # Попробуем в папке проекта (Render может поместить в /opt/render/project/src)
+        alt_path = '/opt/render/project/src/credentials.json'
+        if os.path.exists(alt_path):
+            CREDENTIALS_PATH = alt_path
 
-def get_creds():
-    return service_account.Credentials.from_service_account_file(
+print(f"Используется файл credentials: {CREDENTIALS_PATH}")
+
+try:
+    creds = service_account.Credentials.from_service_account_file(
         CREDENTIALS_PATH,
         scopes=['https://www.googleapis.com/auth/spreadsheets']
     )
+    print("✅ Авторизация успешна")
+except Exception as e:
+    print(f"❌ Ошибка загрузки credentials: {e}")
+    creds = None
+
+def get_creds():
+    return creds
 
 @app.route('/')
 def index():
@@ -31,6 +50,8 @@ def index():
 @app.route('/api/vehicles', methods=['GET'])
 def get_vehicles():
     creds = get_creds()
+    if not creds:
+        return jsonify({'success': False, 'error': 'Нет доступа к Google Sheets'})
     service = build('sheets', 'v4', credentials=creds)
     sheet = service.spreadsheets()
     result = sheet.values().get(spreadsheetId=SPREADSHEET_ID,
@@ -58,13 +79,15 @@ def login():
     if not login or not password:
         return jsonify({'success': False, 'error': 'Введите логин и пароль'})
     creds = get_creds()
+    if not creds:
+        return jsonify({'success': False, 'error': 'Нет доступа к Google Sheets'})
     service = build('sheets', 'v4', credentials=creds)
     sheet = service.spreadsheets()
     result = sheet.values().get(spreadsheetId=SPREADSHEET_ID,
                                 range='Пользователи!A2:E').execute()
     rows = result.get('values', [])
     for row in rows:
-        if len(row) >= 4 and row[1] == login and row[2] == password:
+        if len(row) >= 4 and row[1] == login and str(row[2]) == password:
             return jsonify({
                 'success': True,
                 'user': {
@@ -95,6 +118,8 @@ def submit_waybill():
         return jsonify({'success': False, 'error': 'Заполните все обязательные поля'})
 
     creds = get_creds()
+    if not creds:
+        return jsonify({'success': False, 'error': 'Нет доступа к Google Sheets'})
     service = build('sheets', 'v4', credentials=creds)
     sheet = service.spreadsheets()
 
