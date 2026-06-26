@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Путевой лист. Сонар</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f7f3ee; min-height: 100vh; display: flex; flex-direction: column; }
+    .header { background: #3E5F8A; color: white; padding: 15px 20px; text-align: center; }
+    .header h1 { font-size: 22px; font-weight: 400; }
+    .header h1 span { font-weight: 700; }
+    .container { flex: 1; display: flex; justify-content: center; align-items: flex-start; padding: 20px 15px; }
+    .card { background: white; border-radius: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.12); padding: 25px 20px; width: 100%; max-width: 600px; }
+    .card h2 { color: #3E5F8A; margin-bottom: 20px; text-align: center; font-weight: 400; font-size: 22px; }
+    .card h2 span { font-weight: 700; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 15px; color: #555; margin-bottom: 5px; font-weight: 500; }
+    .form-group input, .form-group select { width: 100%; padding: 14px 16px; border: 1px solid #ddd; border-radius: 10px; font-size: 16px; transition: border 0.3s; background: white; }
+    .form-group input:focus, .form-group select:focus { border-color: #49678D; outline: none; box-shadow: 0 0 0 3px rgba(73,103,141,0.15); }
+    .form-group .readonly { background: #f5f5f5; color: #555; }
+    .form-group input[type="file"] { padding: 12px; }
+    .btn { width: 100%; padding: 16px; background: #3E5F8A; color: white; border: none; border-radius: 10px; font-size: 18px; cursor: pointer; transition: background 0.3s; margin-top: 5px; }
+    .btn:hover { background: #49678D; }
+    .btn-success { background: #2e7d32; }
+    .btn-success:hover { background: #1b5e20; }
+    .btn-danger { background: #888; }
+    .btn-danger:hover { background: #666; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .msg { padding: 14px 18px; border-radius: 10px; margin-top: 15px; display: none; font-size: 16px; }
+    .msg.error { background: #ffebee; color: #c62828; display: block; }
+    .msg.success { background: #e8f5e9; color: #2e7d32; display: block; }
+    .hidden { display: none; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    @media (max-width: 480px) {
+      .form-row { grid-template-columns: 1fr; }
+      .header { padding: 12px; }
+      .header h1 { font-size: 18px; }
+      .card { padding: 20px 15px; }
+      .btn { font-size: 16px; padding: 14px; }
+      .form-group input, .form-group select { font-size: 15px; padding: 12px 14px; }
+    }
+    .loader { display: inline-block; width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid #3E5F8A; border-radius: 50%; animation: spin 1s linear infinite; vertical-align: middle; margin-right: 10px; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Путевой лист. <span>Сонар</span></h1>
+</div>
+
+<div class="container">
+  <!-- КАРТОЧКА ВХОДА -->
+  <div class="card" id="loginCard">
+    <h2>Вход в <span>Сонар</span></h2>
+    <div class="form-group">
+      <label>Логин</label>
+      <input type="text" id="loginInput" placeholder="Введите логин">
+    </div>
+    <div class="form-group">
+      <label>Пароль</label>
+      <input type="password" id="passwordInput" placeholder="Введите пароль">
+    </div>
+    <button class="btn" id="loginBtn">Войти</button>
+    <div id="loginMsg" class="msg"></div>
+  </div>
+
+  <!-- КАРТОЧКА ПУТЕВОГО ЛИСТА -->
+  <div class="card hidden" id="waybillCard">
+    <h2>📝 Путевой лист</h2>
+
+    <div class="form-group">
+      <label>Водитель (ФИО)</label>
+      <input type="text" id="driverName" class="readonly" readonly>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Дата путевого листа</label>
+        <input type="date" id="waybillDate">
+      </div>
+      <div class="form-group">
+        <label>Вид топлива</label>
+        <select id="fuelType">
+          <option value="">Выберите</option>
+          <option value="Дизель">Дизель</option>
+          <option value="Бензин 92">Бензин 92</option>
+          <option value="Бензин 95">Бензин 95</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Транспортное средство</label>
+      <select id="vehicleSelect">
+        <option value="">Загрузка...</option>
+      </select>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Пробег до (км)</label>
+        <input type="number" id="mileageBefore" placeholder="0" step="any">
+      </div>
+      <div class="form-group">
+        <label>Пробег после (км)</label>
+        <input type="number" id="mileageAfter" placeholder="0" step="any">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Топливо на начало дня (л)</label>
+        <input type="number" id="fuelStart" placeholder="0" step="0.1">
+      </div>
+      <div class="form-group">
+        <label>Была ли заправка (л)</label>
+        <input type="number" id="refuel" placeholder="0" step="0.1">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Часы работы</label>
+        <input type="number" id="hoursWorked" placeholder="0" step="0.5">
+      </div>
+      <div class="form-group">
+        <label>Итоговый пробег (км)</label>
+        <input type="text" id="totalMileage" class="readonly" readonly value="0">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Расход топлива (л) — предварительный</label>
+        <input type="text" id="fuelConsumedDisplay" class="readonly" readonly value="0">
+      </div>
+      <div class="form-group">
+        <label>Топливо на конец дня (л) — предварительный</label>
+        <input type="text" id="fuelEndDisplay" class="readonly" readonly value="0">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Загрузить фото путевого листа</label>
+      <input type="file" id="photoInput" accept="image/*" capture="environment">
+    </div>
+
+    <button class="btn btn-success" id="submitBtn">📤 Отправить</button>
+    <div id="waybillMsg" class="msg"></div>
+    <button class="btn btn-danger" id="logoutBtn" style="margin-top:15px;">Выйти</button>
+  </div>
+</div>
+
+<script>
+const API_URL = '';
+
+let currentUser = null;
+let vehicles = [];
+let selectedCoefficient = 0;
+
+function showLogin() {
+  document.getElementById('loginCard').classList.remove('hidden');
+  document.getElementById('waybillCard').classList.add('hidden');
+}
+function showWaybill() {
+  document.getElementById('loginCard').classList.add('hidden');
+  document.getElementById('waybillCard').classList.remove('hidden');
+}
+
+function calculateTotals() {
+  const before = parseFloat(document.getElementById('mileageBefore').value) || 0;
+  const after = parseFloat(document.getElementById('mileageAfter').value) || 0;
+  const total = Math.max(0, after - before);
+  document.getElementById('totalMileage').value = total;
+
+  const fuelConsumed = total / 100 * selectedCoefficient;
+  document.getElementById('fuelConsumedDisplay').value = fuelConsumed.toFixed(2);
+
+  const fuelStart = parseFloat(document.getElementById('fuelStart').value) || 0;
+  const refuel = parseFloat(document.getElementById('refuel').value) || 0;
+  const fuelEnd = fuelStart - fuelConsumed + refuel;
+  document.getElementById('fuelEndDisplay').value = fuelEnd.toFixed(2);
+}
+
+async function apiRequest(endpoint, data = {}) {
+  const response = await fetch(API_URL + endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  return await response.json();
+}
+
+async function loadVehicles() {
+  try {
+    const response = await fetch('/api/vehicles');
+    const result = await response.json();
+    if (result.success) {
+      vehicles = result.vehicles;
+      const select = document.getElementById('vehicleSelect');
+      select.innerHTML = '<option value="">Выберите ТС</option>';
+      vehicles.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v.name + ' ' + v.plate;
+        opt.textContent = v.name + ' ' + v.plate;
+        opt.dataset.coefficient = v.coefficient;
+        select.appendChild(opt);
+      });
+      if (select.value) {
+        const selected = select.options[select.selectedIndex];
+        selectedCoefficient = parseFloat(selected.dataset.coefficient) || 0;
+        calculateTotals();
+      }
+      select.addEventListener('change', function() {
+        const selected = this.options[this.selectedIndex];
+        selectedCoefficient = parseFloat(selected.dataset.coefficient) || 0;
+        calculateTotals();
+      });
+      console.log('✅ ТС загружены:', vehicles.length);
+    } else {
+      document.getElementById('vehicleSelect').innerHTML = '<option value="">Ошибка загрузки</option>';
+      console.error('❌ Ошибка загрузки ТС:', result.error);
+    }
+  } catch (e) {
+    document.getElementById('vehicleSelect').innerHTML = '<option value="">Ошибка загрузки</option>';
+    console.error('❌ Ошибка запроса:', e);
+  }
+}
+
+document.getElementById('loginBtn').addEventListener('click', async function() {
+  const login = document.getElementById('loginInput').value.trim();
+  const password = document.getElementById('passwordInput').value;
+  const msg = document.getElementById('loginMsg');
+  const btn = document.getElementById('loginBtn');
+
+  if (!login || !password) {
+    msg.textContent = 'Введите логин и пароль';
+    msg.className = 'msg error';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loader"></span> Вход...';
+
+  try {
+    const result = await apiRequest('/api/login', { login, password });
+    if (result.success) {
+      currentUser = result.user;
+      document.getElementById('driverName').value = currentUser.fullName;
+      msg.className = 'msg';
+      msg.style.display = 'none';
+      await loadVehicles();
+      showWaybill();
+      document.getElementById('waybillDate').focus();
+      console.log('✅ Пользователь вошёл:', currentUser.fullName);
+    } else {
+      msg.textContent = result.error || 'Ошибка входа';
+      msg.className = 'msg error';
+    }
+  } catch (e) {
+    msg.textContent = 'Ошибка соединения: ' + e.message;
+    msg.className = 'msg error';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Войти';
+  }
+});
+
+document.getElementById('submitBtn').addEventListener('click', async function() {
+  const msg = document.getElementById('waybillMsg');
+  const btn = document.getElementById('submitBtn');
+  msg.className = 'msg';
+  msg.style.display = 'none';
+
+  if (!currentUser) {
+    msg.textContent = 'Ошибка: вы не авторизованы';
+    msg.className = 'msg error';
+    return;
+  }
+
+  const vehicle = document.getElementById('vehicleSelect').value;
+  const mileageBefore = document.getElementById('mileageBefore').value;
+  const mileageAfter = document.getElementById('mileageAfter').value;
+  const fuelStart = document.getElementById('fuelStart').value;
+  const refuel = document.getElementById('refuel').value;
+  const hoursWorked = document.getElementById('hoursWorked').value;
+  const waybillDate = document.getElementById('waybillDate').value;
+  const fuelType = document.getElementById('fuelType').value;
+
+  if (!vehicle || !mileageBefore || !mileageAfter) {
+    msg.textContent = 'Заполните ТС, пробег до и после';
+    msg.className = 'msg error';
+    return;
+  }
+
+  let photoBase64 = '';
+  let photoName = '';
+  let photoType = '';
+  const fileInput = document.getElementById('photoInput');
+  if (fileInput.files.length > 0) {
+    const file = fileInput.files[0];
+    photoName = file.name;
+    photoType = file.type;
+    try {
+      photoBase64 = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result.split(',')[1]);
+        reader.readAsDataURL(file);
+      });
+      console.log('📷 Фото прочитано, размер:', photoBase64.length);
+    } catch (e) {
+      msg.textContent = 'Ошибка чтения файла: ' + e.message;
+      msg.className = 'msg error';
+      return;
+    }
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loader"></span> Отправка...';
+
+  try {
+    const payload = {
+      driverName: currentUser.fullName,
+      vehicle: vehicle,
+      mileageBefore: parseFloat(mileageBefore),
+      mileageAfter: parseFloat(mileageAfter),
+      fuelStart: parseFloat(fuelStart) || 0,
+      refuel: parseFloat(refuel) || 0,
+      hoursWorked: parseFloat(hoursWorked) || 0,
+      waybillDate: waybillDate,
+      fuelType: fuelType,
+      photoBase64: photoBase64,
+      photoName: photoName,
+      photoType: photoType
+    };
+
+    const result = await apiRequest('/api/submit', payload);
+    if (result.success) {
+      msg.textContent = '✅ ' + result.message;
+      msg.className = 'msg success';
+      // очистка
+      document.getElementById('vehicleSelect').value = '';
+      document.getElementById('mileageBefore').value = '';
+      document.getElementById('mileageAfter').value = '';
+      document.getElementById('fuelStart').value = '';
+      document.getElementById('refuel').value = '';
+      document.getElementById('hoursWorked').value = '';
+      document.getElementById('waybillDate').value = '';
+      document.getElementById('fuelType').value = '';
+      document.getElementById('photoInput').value = '';
+      document.getElementById('totalMileage').value = '0';
+      document.getElementById('fuelConsumedDisplay').value = '0';
+      document.getElementById('fuelEndDisplay').value = '0';
+      selectedCoefficient = 0;
+      console.log('✅ Отправка успешна');
+    } else {
+      msg.textContent = '❌ ' + (result.error || 'Ошибка отправки');
+      msg.className = 'msg error';
+      console.error('❌ Ошибка отправки:', result.error);
+    }
+  } catch (e) {
+    msg.textContent = '❌ Ошибка соединения: ' + e.message;
+    msg.className = 'msg error';
+    console.error('❌ Ошибка запроса:', e);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📤 Отправить';
+  }
+});
+
+document.getElementById('logoutBtn').addEventListener('click', function() {
+  currentUser = null;
+  document.getElementById('loginInput').value = '';
+  document.getElementById('passwordInput').value = '';
+  showLogin();
+});
+
+window.addEventListener('load', function() {
+  showLogin();
+  document.getElementById('mileageBefore').addEventListener('input', calculateTotals);
+  document.getElementById('mileageAfter').addEventListener('input', calculateTotals);
+  document.getElementById('fuelStart').addEventListener('input', calculateTotals);
+  document.getElementById('refuel').addEventListener('input', calculateTotals);
+});
+</script>
+</body>
+</html>
